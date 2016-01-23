@@ -8,6 +8,7 @@ bool _shouldClose;
 ImageID _nextImage;
 bool _heldInputs[INPUT_MAX];
 bool _pressedInputs[INPUT_MAX];
+GLFWwindow *_glfwWindow;
 
 typedef struct
 {
@@ -17,7 +18,7 @@ typedef struct
 Image _images[IMAGE_MAX];
 #define NULL_IMAGE {0, NULL_POINT}
 
-int GLFWCALL _sys_close_callback();
+void _sys_close_callback(GLFWwindow *window);
 
 void sys_init(Point resolution, int pixel_scale)
 {
@@ -37,22 +38,25 @@ void sys_init(Point resolution, int pixel_scale)
     LOG("Failed to initialize GLFW");
     exit( EXIT_FAILURE );
   }
-  result = glfwOpenWindow( _resolution.x*_pixel_scale, _resolution.y*_pixel_scale,
-                           0,0,0,0, 0,0, GLFW_WINDOW );
-  glfwSetWindowTitle("Sunk Coast");
-  if(!result)
+  glfwWindowHint(GLFW_FLOATING, GL_TRUE);
+  _glfwWindow = glfwCreateWindow(_resolution.x*_pixel_scale,
+                                 _resolution.y*_pixel_scale, "Sunk Coast",
+                                 NULL, NULL);
+  if(!_glfwWindow)
   {
     LOG("Failed to open GLFW window");
     exit( EXIT_FAILURE );
   }
+
+  glfwMakeContextCurrent(_glfwWindow);
   
   // Detect key presses between calls to GetKey
-  glfwEnable( GLFW_STICKY_KEYS );
+  glfwSetInputMode(_glfwWindow, GLFW_STICKY_KEYS, GL_TRUE);
   
   // Enable vertical sync (on cards that support it)
   glfwSwapInterval( 1 );
   
-  glfwSetWindowCloseCallback(_sys_close_callback);
+  glfwSetWindowCloseCallback(_glfwWindow, _sys_close_callback);
   
   LOG("Initialize DevIL");
   
@@ -70,10 +74,11 @@ void sys_init(Point resolution, int pixel_scale)
   srand(time(NULL));
 }
 
-int GLFWCALL _sys_close_callback()
+void _sys_close_callback(GLFWwindow *window)
 {
+  if (window != _glfwWindow)
+    LOG("_sys_close_callback called with incorrect window");
   _shouldClose = true;
-  return true;
 }
 
 bool sys_shouldClose()
@@ -96,7 +101,7 @@ void sys_drawInit(Color col)
   Point maxPixelSize = NULL_POINT;
   Point drawRectSize = NULL_POINT;
   
-  glfwGetWindowSize( &_windowSize.x, &_windowSize.y);  
+  glfwGetWindowSize(_glfwWindow, &_windowSize.x, &_windowSize.y);
   glViewport( 0, 0, _windowSize.x, _windowSize.y ); 
   
   glClearColor((float)col.r/255.0f, (float)col.g/255.0f, (float)col.b/255.0f, (float)col.a/255.0f);
@@ -166,7 +171,8 @@ void sys_drawFinish()
   _sys_drawRectangle(rectSBar, black);
   _sys_drawRectangle(rectWBar, black);
   
-  glfwSwapBuffers();
+  glfwSwapBuffers(_glfwWindow);
+  glfwPollEvents();
 }
 
 ImageID sys_loadImage(const char *name)
@@ -299,8 +305,11 @@ bool sys_inputPressed(Input input)
 
 Point sys_mousePos()
 {
+  double x, y;
   Point out;
-  glfwGetMousePos(&out.x, &out.y);
+  glfwGetCursorPos(_glfwWindow, &x, &y);
+  out.x = x;
+  out.y = y;
   out = pointAddPoint(out, pointInverse(_drawRect.a));  
   out.x /= _pixel_scale;
   out.y /= _pixel_scale;
@@ -309,7 +318,7 @@ Point sys_mousePos()
 
 bool _sys_pressed(int key)
 {
-  return glfwGetKey(key) == GLFW_PRESS;
+  return glfwGetKey(_glfwWindow, key) == GLFW_PRESS;
 }
 
 
@@ -320,19 +329,19 @@ void sys_update()
   for(i=0; i<INPUT_MAX; i++)
     _oldInputs[i] = _heldInputs[i];
     
-  _heldInputs[INPUT_UP] = _sys_pressed(GLFW_KEY_UP) || _sys_pressed('K') || _sys_pressed('W') || _sys_pressed(GLFW_KEY_KP_8);
-  _heldInputs[INPUT_RIGHT] = _sys_pressed(GLFW_KEY_RIGHT) || _sys_pressed('L') || _sys_pressed('D') || _sys_pressed(GLFW_KEY_KP_6);
-  _heldInputs[INPUT_DOWN] = _sys_pressed(GLFW_KEY_DOWN) || _sys_pressed('J') || _sys_pressed('S') || _sys_pressed(GLFW_KEY_KP_2);
-  _heldInputs[INPUT_LEFT] = _sys_pressed(GLFW_KEY_LEFT) || _sys_pressed('H') || _sys_pressed('A') || _sys_pressed(GLFW_KEY_KP_4);
-  _heldInputs[INPUT_DIVE] = _sys_pressed('V');
-  _heldInputs[INPUT_RISE] = _sys_pressed('R');
-  _heldInputs[INPUT_PICKUP] = _sys_pressed('P');
-  _heldInputs[INPUT_DROP] = _sys_pressed('O');
-  _heldInputs[INPUT_USE] = _sys_pressed('U');
-  _heldInputs[INPUT_ESC] = _sys_pressed(GLFW_KEY_ESC);
+  _heldInputs[INPUT_UP] = _sys_pressed(GLFW_KEY_UP) || _sys_pressed(GLFW_KEY_K) || _sys_pressed(GLFW_KEY_W) || _sys_pressed(GLFW_KEY_KP_8);
+  _heldInputs[INPUT_RIGHT] = _sys_pressed(GLFW_KEY_RIGHT) || _sys_pressed(GLFW_KEY_L) || _sys_pressed(GLFW_KEY_D) || _sys_pressed(GLFW_KEY_KP_6);
+  _heldInputs[INPUT_DOWN] = _sys_pressed(GLFW_KEY_DOWN) || _sys_pressed(GLFW_KEY_J) || _sys_pressed(GLFW_KEY_S) || _sys_pressed(GLFW_KEY_KP_2);
+  _heldInputs[INPUT_LEFT] = _sys_pressed(GLFW_KEY_LEFT) || _sys_pressed(GLFW_KEY_H) || _sys_pressed(GLFW_KEY_A) || _sys_pressed(GLFW_KEY_KP_4);
+  _heldInputs[INPUT_DIVE] = _sys_pressed(GLFW_KEY_V);
+  _heldInputs[INPUT_RISE] = _sys_pressed(GLFW_KEY_R);
+  _heldInputs[INPUT_PICKUP] = _sys_pressed(GLFW_KEY_P);
+  _heldInputs[INPUT_DROP] = _sys_pressed(GLFW_KEY_O);
+  _heldInputs[INPUT_USE] = _sys_pressed(GLFW_KEY_U);
+  _heldInputs[INPUT_ESC] = _sys_pressed(GLFW_KEY_ESCAPE);
 
   for(i=0; i<10; i++)
-    _heldInputs[INPUT_0 + i] = glfwGetKey('0'+i) == GLFW_PRESS;
+    _heldInputs[INPUT_0 + i] = glfwGetKey(_glfwWindow, GLFW_KEY_0+i) == GLFW_PRESS;
 
   _heldInputs[INPUT_ANY] = false;
   for(i=0; i<INPUT_ANY; i++)

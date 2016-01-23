@@ -12,7 +12,7 @@ ifeq ($(UNAME), MINGW32_NT-5.1)
 	GL_LIBS = -lglfw -lglu32 -lopengl32 -lDevIL
 endif
 ifeq ($(UNAME), Linux)
-	GL_LIBS = -lGL -lGLU -lIL -lglfw
+	GL_LIBS = -lGL -lGLU -lIL -lglfw -lm
 endif
 ifeq ($(UNAME), Darwin)
 	GL_LIBS = -framework OpenGL -lIL -lglfw

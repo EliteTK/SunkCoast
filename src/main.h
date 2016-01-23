@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <GL/glfw.h>
+#define GLFW_INCLUDE_GLU
+#include <GLFW/glfw3.h>
 #include <IL/il.h> 
 
 #include "datatypes.h"
